@@ -6,8 +6,9 @@ This shows how to use NSOperations to simplify app architecture. It includes sev
 
 ### Build
 
-iOS 9 SDK
+* XCode 7.3
+* Swift 2.2
 
 ### Runtime
 
-iOS 9
+* iOS 9
