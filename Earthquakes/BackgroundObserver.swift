@@ -25,9 +25,9 @@ class BackgroundObserver: NSObject, OperationObserver {
         super.init()
         
         // We need to know when the application moves to/from the background.
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "didEnterBackground:", name: UIApplicationDidEnterBackgroundNotification, object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(BackgroundObserver.didEnterBackground(_:)), name: UIApplicationDidEnterBackgroundNotification, object: nil)
 
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: "didEnterForeground:", name: UIApplicationDidBecomeActiveNotification, object: nil)
+        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(BackgroundObserver.didEnterForeground(_:)), name: UIApplicationDidBecomeActiveNotification, object: nil)
         
         isInBackground = UIApplication.sharedApplication().applicationState == .Background
         
