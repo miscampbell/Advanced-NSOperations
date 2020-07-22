@@ -54,24 +54,24 @@ struct UserNotificationCondition: OperationCondition {
         self.behavior = behavior
     }
     
-    func dependencyForOperation(operation: Operation) -> NSOperation? {
+    func dependencyForOperation(operation: EQOperation) -> Operation? {
         return UserNotificationPermissionOperation(settings: settings, application: application, behavior: behavior)
     }
     
-    func evaluateForOperation(operation: Operation, completion: OperationConditionResult -> Void) {
+    func evaluateForOperation(operation: EQOperation, completion: (OperationConditionResult) -> Void) {
         let result: OperationConditionResult
         
-        let current = application.currentUserNotificationSettings()
+        let current = application.currentUserNotificationSettings
 
         switch (current, settings)  {
-            case (let current?, let settings) where current.contains(settings):
+        case (let current?, let settings) where current.contains(settings: settings):
                 result = .Satisfied
 
             default:
                 let error = NSError(code: .ConditionFailed, userInfo: [
-                    OperationConditionKey: self.dynamicType.name,
-                    self.dynamicType.currentSettings: current ?? NSNull(),
-                    self.dynamicType.desiredSettings: settings
+                    OperationConditionKey: type(of: self).name,
+                    type(of: self).currentSettings: current ?? NSNull(),
+                    type(of: self).desiredSettings: settings
                 ])
                 
                 result = .Failed(error)
@@ -85,7 +85,7 @@ struct UserNotificationCondition: OperationCondition {
     A private `Operation` subclass to register a `UIUserNotificationSettings`
     object with a `UIApplication`, prompting the user for permission if necessary.
 */
-private class UserNotificationPermissionOperation: Operation {
+private class UserNotificationPermissionOperation: EQOperation {
     let settings: UIUserNotificationSettings
     let application: UIApplication
     let behavior: UserNotificationCondition.Behavior
@@ -97,24 +97,30 @@ private class UserNotificationPermissionOperation: Operation {
         
         super.init()
 
-        addCondition(AlertPresentation())
+        addCondition(condition: AlertPresentation())
     }
     
     override func execute() {
-        dispatch_async(dispatch_get_main_queue()) {
-            let current = self.application.currentUserNotificationSettings()
-            
-            let settingsToRegister: UIUserNotificationSettings
-            
-            switch (current, self.behavior) {
+        DispatchQueue.global(qos: .background).async {
+
+            // Background Thread
+
+            DispatchQueue.main.async {
+                // Run UI Updates
+                let current = self.application.currentUserNotificationSettings
+
+                let settingsToRegister: UIUserNotificationSettings
+
+                switch (current, self.behavior) {
                 case (let currentSettings?, .Merge):
-                    settingsToRegister = currentSettings.settingsByMerging(self.settings)
+                    settingsToRegister = currentSettings.settingsByMerging(settings: self.settings)
 
                 default:
                     settingsToRegister = self.settings
+                }
+
+                self.application.registerUserNotificationSettings(settingsToRegister)
             }
-            
-            self.application.registerUserNotificationSettings(settingsToRegister)
         }
     }
 }

@@ -20,11 +20,11 @@ struct MutuallyExclusive<T>: OperationCondition {
     
     init() { }
     
-    func dependencyForOperation(operation: Operation) -> NSOperation? {
+    func dependencyForOperation(operation: EQOperation) -> Operation? {
         return nil
     }
     
-    func evaluateForOperation(operation: Operation, completion: OperationConditionResult -> Void) {
+    func evaluateForOperation(operation: EQOperation, completion: (OperationConditionResult) -> Void) {
         completion(.Satisfied)
     }
 }

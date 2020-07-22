@@ -21,20 +21,20 @@ struct CalendarCondition: OperationCondition {
         self.entityType = entityType
     }
     
-    func dependencyForOperation(operation: Operation) -> NSOperation? {
+    func dependencyForOperation(operation: EQOperation) -> Operation? {
         return CalendarPermissionOperation(entityType: entityType)
     }
     
-    func evaluateForOperation(operation: Operation, completion: OperationConditionResult -> Void) {
-        switch EKEventStore.authorizationStatusForEntityType(entityType) {
-            case .Authorized:
+    func evaluateForOperation(operation: EQOperation, completion: (OperationConditionResult) -> Void) {
+        switch EKEventStore.authorizationStatus(for: entityType) {
+        case .authorized:
                 completion(.Satisfied)
 
             default:
                 // We are not authorized to access entities of this type.
                 let error = NSError(code: .ConditionFailed, userInfo: [
-                    OperationConditionKey: self.dynamicType.name,
-                    self.dynamicType.entityTypeKey: entityType.rawValue
+                    OperationConditionKey: type(of: self).name,
+                    type(of: self).entityTypeKey: entityType.rawValue
                 ])
                 
                 completion(.Failed(error))
@@ -53,25 +53,31 @@ private let SharedEventStore = EKEventStore()
     A private `Operation` that will request access to the user's Calendar/Reminders,
     if it has not already been granted.
 */
-private class CalendarPermissionOperation: Operation {
+private class CalendarPermissionOperation: EQOperation {
     let entityType: EKEntityType
     
     init(entityType: EKEntityType) {
         self.entityType = entityType
         super.init()
-        addCondition(AlertPresentation())
+        addCondition(condition: AlertPresentation())
     }
     
     override func execute() {
-        let status = EKEventStore.authorizationStatusForEntityType(entityType)
+        let status = EKEventStore.authorizationStatus(for: entityType)
         
         switch status {
-            case .NotDetermined:
-                dispatch_async(dispatch_get_main_queue()) {
-                    SharedEventStore.requestAccessToEntityType(self.entityType) { granted, error in
+        case .notDetermined:
+            DispatchQueue.global(qos: .background).async {
+
+                // Background Thread
+
+                DispatchQueue.main.async {
+                    // Run UI Updates
+                    SharedEventStore.requestAccess(to: self.entityType) { granted, error in
                         self.finish()
                     }
                 }
+            }
 
             default:
                 finish()

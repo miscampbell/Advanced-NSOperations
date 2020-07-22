@@ -17,10 +17,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // MARK: UIApplicationDelegate
 
     func application(application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: NSError) {
-        RemoteNotificationCondition.didFailToRegister(error)
+        RemoteNotificationCondition.didFailToRegister(error: error)
     }
     
     func application(application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: NSData) {
-        RemoteNotificationCondition.didReceiveNotificationToken(deviceToken)
+        RemoteNotificationCondition.didReceiveNotificationToken(token: deviceToken)
     }
 }

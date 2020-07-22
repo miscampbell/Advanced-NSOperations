@@ -25,10 +25,10 @@ class GetEarthquakesOperation: GroupOperation {
                                        parsing are complete. This handler will be
                                        invoked on an arbitrary queue.
     */
-    init(context: NSManagedObjectContext, completionHandler: Void -> Void) {
-        let cachesFolder = try! NSFileManager.defaultManager().URLForDirectory(.CachesDirectory, inDomain: .UserDomainMask, appropriateForURL: nil, create: true)
+    init(context: NSManagedObjectContext, completionHandler: @escaping (() -> Void) -> Void) {
+        let cachesFolder = try! FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
 
-        let cacheFile = cachesFolder.URLByAppendingPathComponent("earthquakes.json")
+        let cacheFile = cachesFolder.appendingPathComponent("earthquakes.json")
         
         /*
             This operation is made of three child operations:
@@ -39,7 +39,7 @@ class GetEarthquakesOperation: GroupOperation {
         downloadOperation = DownloadEarthquakesOperation(cacheFile: cacheFile)
         parseOperation = ParseEarthquakesOperation(cacheFile: cacheFile, context: context)
         
-        let finishOperation = NSBlockOperation(block: completionHandler)
+        let finishOperation = BlockOperation(block: completionHandler)
         
         // These operations must be executed in order
         parseOperation.addDependency(downloadOperation)
@@ -50,9 +50,9 @@ class GetEarthquakesOperation: GroupOperation {
         name = "Get Earthquakes"
     }
     
-    override func operationDidFinish(operation: NSOperation, withErrors errors: [NSError]) {
-        if let firstError = errors.first where (operation === downloadOperation || operation === parseOperation) {
-            produceAlert(firstError)
+    override func operationDidFinish(operation: Operation, withErrors errors: [NSError]) {
+        if let firstError = errors.first, (operation === downloadOperation || operation === parseOperation) {
+            produceAlert(error: firstError)
         }
     }
     
@@ -89,7 +89,7 @@ class GetEarthquakesOperation: GroupOperation {
                 return
         }
         
-        produceOperation(alert)
+        produceOperation(operation: alert)
         hasProducedAlert = true
     }
 }

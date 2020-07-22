@@ -18,18 +18,18 @@ import UIKit
 class BackgroundObserver: NSObject, OperationObserver {
     // MARK: Properties
 
-    private var identifier = UIBackgroundTaskInvalid
+    private var identifier = UIBackgroundTaskIdentifier.invalid
     private var isInBackground = false
     
     override init() {
         super.init()
         
         // We need to know when the application moves to/from the background.
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(BackgroundObserver.didEnterBackground(_:)), name: UIApplicationDidEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(BackgroundObserver.didEnterBackground(notification:)), name: UIApplication.didEnterBackgroundNotification, object: nil)
 
-        NSNotificationCenter.defaultCenter().addObserver(self, selector: #selector(BackgroundObserver.didEnterForeground(_:)), name: UIApplicationDidBecomeActiveNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(BackgroundObserver.didEnterForeground(notification:)), name: UIApplication.didBecomeActiveNotification, object: nil)
         
-        isInBackground = UIApplication.sharedApplication().applicationState == .Background
+        isInBackground = UIApplication.shared.applicationState == .background
         
         // If we're in the background already, immediately begin the background task.
         if isInBackground {
@@ -38,7 +38,7 @@ class BackgroundObserver: NSObject, OperationObserver {
     }
     
     deinit {
-        NSNotificationCenter.defaultCenter().removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
     
     @objc func didEnterBackground(notification: NSNotification) {
@@ -56,27 +56,27 @@ class BackgroundObserver: NSObject, OperationObserver {
     }
     
     private func startBackgroundTask() {
-        if identifier == UIBackgroundTaskInvalid {
-            identifier = UIApplication.sharedApplication().beginBackgroundTaskWithName("BackgroundObserver", expirationHandler: {
+        if identifier == UIBackgroundTaskIdentifier.invalid {
+            identifier = UIApplication.shared.beginBackgroundTask(withName: "BackgroundObserver", expirationHandler: {
                 self.endBackgroundTask()
             })
         }
     }
     
     private func endBackgroundTask() {
-        if identifier != UIBackgroundTaskInvalid {
-            UIApplication.sharedApplication().endBackgroundTask(identifier)
-            identifier = UIBackgroundTaskInvalid
+        if identifier != UIBackgroundTaskIdentifier.invalid {
+            UIApplication.shared.endBackgroundTask(identifier)
+            identifier = UIBackgroundTaskIdentifier.invalid
         }
     }
     
     // MARK: Operation Observer
     
-    func operationDidStart(operation: Operation) { }
+    func operationDidStart(operation: EQOperation) { }
     
-    func operation(operation: Operation, didProduceOperation newOperation: NSOperation) { }
+    func operation(operation: EQOperation, didProduceOperation newOperation: Operation) { }
 
-    func operationDidFinish(operation: Operation, errors: [NSError]) {
+    func operationDidFinish(operation: EQOperation, errors: [NSError]) {
         endBackgroundTask()
     }
 }

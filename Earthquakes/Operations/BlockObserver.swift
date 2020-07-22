@@ -15,11 +15,11 @@ import Foundation
 struct BlockObserver: OperationObserver {
     // MARK: Properties
     
-    private let startHandler: (Operation -> Void)?
-    private let produceHandler: ((Operation, NSOperation) -> Void)?
-    private let finishHandler: ((Operation, [NSError]) -> Void)?
+    private let startHandler: ((EQOperation) -> Void)?
+    private let produceHandler: ((EQOperation, Operation) -> Void)?
+    private let finishHandler: ((EQOperation, [NSError]) -> Void)?
     
-    init(startHandler: (Operation -> Void)? = nil, produceHandler: ((Operation, NSOperation) -> Void)? = nil, finishHandler: ((Operation, [NSError]) -> Void)? = nil) {
+    init(startHandler: ((EQOperation) -> Void)? = nil, produceHandler: ((EQOperation, Operation) -> Void)? = nil, finishHandler: ((EQOperation, [NSError]) -> Void)? = nil) {
         self.startHandler = startHandler
         self.produceHandler = produceHandler
         self.finishHandler = finishHandler
@@ -27,15 +27,15 @@ struct BlockObserver: OperationObserver {
     
     // MARK: OperationObserver
     
-    func operationDidStart(operation: Operation) {
+    func operationDidStart(operation: EQOperation) {
         startHandler?(operation)
     }
     
-    func operation(operation: Operation, didProduceOperation newOperation: NSOperation) {
+    func operation(operation: EQOperation, didProduceOperation newOperation: Operation) {
         produceHandler?(operation, newOperation)
     }
     
-    func operationDidFinish(operation: Operation, errors: [NSError]) {
+    func operationDidFinish(operation: EQOperation, errors: [NSError]) {
         finishHandler?(operation, errors)
     }
 }

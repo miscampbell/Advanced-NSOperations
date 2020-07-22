@@ -8,10 +8,10 @@ This file shows how to present an alert as part of an operation.
 
 import UIKit
 
-class AlertOperation: Operation {
+class AlertOperation: EQOperation {
     // MARK: Properties
 
-    private let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .Alert)
+    private let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
     private let presentationContext: UIViewController?
     
     var title: String? {
@@ -38,21 +38,21 @@ class AlertOperation: Operation {
     // MARK: Initialization
     
     init(presentationContext: UIViewController? = nil) {
-        self.presentationContext = presentationContext ?? UIApplication.sharedApplication().keyWindow?.rootViewController
+        self.presentationContext = presentationContext ?? UIApplication.shared.keyWindow?.rootViewController
 
         super.init()
         
-        addCondition(AlertPresentation())
+        addCondition(condition: AlertPresentation())
         
         /*
             This operation modifies the view controller hierarchy.
             Doing this while other such operations are executing can lead to
             inconsistencies in UIKit. So, let's make them mutally exclusive.
         */
-        addCondition(MutuallyExclusive<UIViewController>())
+        addCondition(condition: MutuallyExclusive<UIViewController>())
     }
     
-    func addAction(title: String, style: UIAlertActionStyle = .Default, handler: AlertOperation -> Void = { _ in }) {
+    func addAction(title: String, style: UIAlertAction.Style = .default, handler: @escaping (AlertOperation) -> Void = { _ in }) {
         let action = UIAlertAction(title: title, style: style) { [weak self] _ in
             if let strongSelf = self {
                 handler(strongSelf)
@@ -71,12 +71,18 @@ class AlertOperation: Operation {
             return
         }
 
-        dispatch_async(dispatch_get_main_queue()) {
-            if self.alertController.actions.isEmpty {
-                self.addAction("OK")
+        DispatchQueue.global(qos: .background).async {
+
+            // Background Thread
+
+            DispatchQueue.main.async {
+                // Run UI Updates
+                if self.alertController.actions.isEmpty {
+                    self.addAction(title: "OK")
+                }
+
+                presentationContext.present(self.alertController, animated: true, completion: nil)
             }
-            
-            presentationContext.presentViewController(self.alertController, animated: true, completion: nil)
         }
     }
 }

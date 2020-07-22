@@ -18,18 +18,18 @@ struct PhotosCondition: OperationCondition {
     
     init() { }
     
-    func dependencyForOperation(operation: Operation) -> NSOperation? {
+    func dependencyForOperation(operation: EQOperation) -> Operation? {
         return PhotosPermissionOperation()
     }
     
-    func evaluateForOperation(operation: Operation, completion: OperationConditionResult -> Void) {
+    func evaluateForOperation(operation: EQOperation, completion: (OperationConditionResult) -> Void) {
         switch PHPhotoLibrary.authorizationStatus() {
-            case .Authorized:
+            case .authorized:
                 completion(.Satisfied)
 
             default:
                 let error = NSError(code: .ConditionFailed, userInfo: [
-                    OperationConditionKey: self.dynamicType.name
+                    OperationConditionKey: type(of: self).name
                 ])
 
                 completion(.Failed(error))
@@ -41,19 +41,25 @@ struct PhotosCondition: OperationCondition {
     A private `Operation` that will request access to the user's Photos, if it
     has not already been granted.
 */
-private class PhotosPermissionOperation: Operation {
+private class PhotosPermissionOperation: EQOperation {
     override init() {
         super.init()
 
-        addCondition(AlertPresentation())
+        addCondition(condition: AlertPresentation())
     }
     
     override func execute() {
         switch PHPhotoLibrary.authorizationStatus() {
-            case .NotDetermined:
-                dispatch_async(dispatch_get_main_queue()) {
-                    PHPhotoLibrary.requestAuthorization { status in
-                        self.finish()
+            case .notDetermined:
+                DispatchQueue.global(qos: .background).async {
+
+                    // Background Thread
+
+                    DispatchQueue.main.async {
+                        // Run UI Updates
+                        PHPhotoLibrary.requestAuthorization { status in
+                            self.finish()
+                        }
                     }
                 }
      

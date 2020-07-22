@@ -20,8 +20,8 @@ extension UIUserNotificationSettings {
         
         let otherCategories = settings.categories ?? []
         let myCategories = categories ?? []
-        
-        return myCategories.isSupersetOf(otherCategories)
+
+        return myCategories.isSuperset(of: otherCategories)
     }
     
     /**
@@ -32,17 +32,19 @@ extension UIUserNotificationSettings {
         let mergedTypes = types.union(settings.types)
         
         let myCategories = categories ?? []
-        var existingCategoriesByIdentifier = Dictionary(sequence: myCategories) { $0.identifier }
+        var existingCategoriesByIdentifier = [String: UIUserNotificationCategory]()
+//            Dictionary(sequence: myCategories) { $0.identifier }
         
         let newCategories = settings.categories ?? []
-        let newCategoriesByIdentifier = Dictionary(sequence: newCategories) { $0.identifier }
+        let newCategoriesByIdentifier = [String: UIUserNotificationCategory]()
+//            Dictionary(sequence: newCategories) { $0.identifier }
         
         for (newIdentifier, newCategory) in newCategoriesByIdentifier {
             existingCategoriesByIdentifier[newIdentifier] = newCategory
         }
         
         let mergedCategories = Set(existingCategoriesByIdentifier.values)
-        return UIUserNotificationSettings(forTypes: mergedTypes, categories: mergedCategories)
+        return UIUserNotificationSettings(types: mergedTypes, categories: mergedCategories)
     }
 }
 

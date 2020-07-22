@@ -13,9 +13,9 @@ import CloudKit
 class EarthquakesTableViewController: UITableViewController {
     // MARK: Properties
 
-    var fetchedResultsController: NSFetchedResultsController?
+    var fetchedResultsController: NSFetchedResultsController<NSFetchRequestResult>?
     
-    let operationQueue = OperationQueue()
+    let operationQueue = EQOperationQueue()
     
     // MARK: View Controller
     
@@ -24,95 +24,108 @@ class EarthquakesTableViewController: UITableViewController {
 
         let operation = LoadModelOperation { context in
             // Now that we have a context, build our `FetchedResultsController`.
-            dispatch_async(dispatch_get_main_queue()) {
-                let request = NSFetchRequest(entityName: Earthquake.entityName)
+            DispatchQueue.global(qos: .background).async {
+                // Background Thread
+                DispatchQueue.main.async {
+                    // Run UI Updates
+                    let request = NSFetchRequest<NSFetchRequestResult>(entityName: Earthquake.entityName)
 
-                request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
-                
-                request.fetchLimit = 100
-                
-                let controller = NSFetchedResultsController(fetchRequest: request, managedObjectContext: context, sectionNameKeyPath: nil, cacheName: nil)
-                
-                self.fetchedResultsController = controller
-                
-                self.updateUI()
+                    request.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
+
+                    request.fetchLimit = 100
+
+                    let controller = NSFetchedResultsController(fetchRequest: request, managedObjectContext: context, sectionNameKeyPath: nil, cacheName: nil)
+
+                    self.fetchedResultsController = controller
+
+                    self.updateUI()
+                }
             }
         }
 
         operationQueue.addOperation(operation)
     }
 
-    override func numberOfSectionsInTableView(tableView: UITableView) -> Int {
+    override func numberOfSections(in tableView: UITableView) -> Int {
+
         return fetchedResultsController?.sections?.count ?? 0
     }
 
-    override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         let section = fetchedResultsController?.sections?[section]
 
         return section?.numberOfObjects ?? 0
     }
 
-    override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCellWithIdentifier("earthquakeCell", forIndexPath: indexPath) as! EarthquakeTableViewCell
-        
-        if let earthquake = fetchedResultsController?.objectAtIndexPath(indexPath) as? Earthquake {
-            cell.configure(earthquake)
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "earthquakeCell", for: indexPath) as! EarthquakeTableViewCell
+
+        if let earthquake = fetchedResultsController?.object(at: indexPath) as? Earthquake {
+            cell.configure(earthquake: earthquake)
         }
 
         return cell
     }
-    
-    override func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
+
+    override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+
         /*
-            Instead of performing the segue directly, we can wrap it in a `BlockOperation`.
-            This allows us to attach conditions to the operation. For example, you
-            could make it so that you could only perform the segue if the network
-            is reachable and you have access to the user's Photos library.
-            
-            If you decide to use this pattern in your apps, choose conditions that
-            are sensible and do not place onerous requirements on the user.
-            
-            It's also worth noting that the Observer attached to the `BlockOperation`
-            will cause the tableview row to be deselected automatically if the
-            `Operation` fails.
-            
-            You may choose to add your own observer to introspect the errors reported
-            as the operation finishes. Doing so would allow you to present a message
-            to the user about why you were unable to perform the requested action.
-        */
-        
+         Instead of performing the segue directly, we can wrap it in a `BlockOperation`.
+         This allows us to attach conditions to the operation. For example, you
+         could make it so that you could only perform the segue if the network
+         is reachable and you have access to the user's Photos library.
+
+         If you decide to use this pattern in your apps, choose conditions that
+         are sensible and do not place onerous requirements on the user.
+
+         It's also worth noting that the Observer attached to the `BlockOperation`
+         will cause the tableview row to be deselected automatically if the
+         `Operation` fails.
+
+         You may choose to add your own observer to introspect the errors reported
+         as the operation finishes. Doing so would allow you to present a message
+         to the user about why you were unable to perform the requested action.
+         */
+
         let operation = BlockOperation {
-            self.performSegueWithIdentifier("showEarthquake", sender: nil)
+            self.performSegue(withIdentifier: "showEarthquake", sender: nil)
         }
-        
-        operation.addCondition(MutuallyExclusive<UIViewController>())
-        
+
+        operation.addCondition(condition: MutuallyExclusive<UIViewController>())
+
         let blockObserver = BlockObserver { _, errors in
             /*
-                If the operation errored (ex: a condition failed) then the segue
-                isn't going to happen. We shouldn't leave the row selected.
-            */
+             If the operation errored (ex: a condition failed) then the segue
+             isn't going to happen. We shouldn't leave the row selected.
+             */
             if !errors.isEmpty {
-                dispatch_async(dispatch_get_main_queue()) {
-                    tableView.deselectRowAtIndexPath(indexPath, animated: true)
+                DispatchQueue.global(qos: .background).async {
+
+                    // Background Thread
+
+                    DispatchQueue.main.async {
+                        // Run UI Updates
+                        tableView.deselectRow(at: indexPath, animated: true)
+                    }
                 }
+
             }
         }
-        
-        operation.addObserver(blockObserver)
-        
+
+        operation.addObserver(observer: blockObserver)
+
         operationQueue.addOperation(operation)
     }
-    
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        guard let navigationVC = segue.destinationViewController as? UINavigationController,
-                  detailVC = navigationVC.viewControllers.first as? EarthquakeTableViewController else {
-            return
+
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        guard let navigationVC = segue.destination as? UINavigationController,
+            let detailVC = navigationVC.viewControllers.first as? EarthquakeTableViewController else {
+                return
         }
         detailVC.queue = operationQueue
 
         if let indexPath = tableView.indexPathForSelectedRow {
-            detailVC.earthquake = fetchedResultsController?.objectAtIndexPath(indexPath) as? Earthquake
+            detailVC.earthquake = fetchedResultsController?.object(at: indexPath) as? Earthquake
         }
     }
     
@@ -122,10 +135,16 @@ class EarthquakesTableViewController: UITableViewController {
     
     private func getEarthquakes(userInitiated: Bool = true) {
         if let context = fetchedResultsController?.managedObjectContext {
-            let getEarthquakesOperation = GetEarthquakesOperation(context: context) {
-                dispatch_async(dispatch_get_main_queue()) {
-                    self.refreshControl?.endRefreshing()
-                    self.updateUI()
+            let getEarthquakesOperation = GetEarthquakesOperation(context: context) {_ in 
+                DispatchQueue.global(qos: .background).async {
+
+                    // Background Thread
+
+                    DispatchQueue.main.async {
+                        // Run UI Updates
+                        self.refreshControl?.endRefreshing()
+                        self.updateUI()
+                    }
                 }
             }
 
@@ -137,8 +156,9 @@ class EarthquakesTableViewController: UITableViewController {
                 We don't have a context to operate on, so wait a bit and just make
                 the refresh control end.
             */
-            let when = dispatch_time(DISPATCH_TIME_NOW, Int64(0.3 * Double(NSEC_PER_SEC)))
-            dispatch_after(when, dispatch_get_main_queue()) {
+
+            let when = DispatchTime.now() + 0.3
+            DispatchQueue.main.asyncAfter(deadline: when) {
                 self.refreshControl?.endRefreshing()
             }
         }

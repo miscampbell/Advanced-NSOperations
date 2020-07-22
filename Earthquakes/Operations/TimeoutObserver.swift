@@ -17,40 +17,40 @@ struct TimeoutObserver: OperationObserver {
 
     static let timeoutKey = "Timeout"
     
-    private let timeout: NSTimeInterval
+    private let timeout: TimeInterval
     
     // MARK: Initialization
     
-    init(timeout: NSTimeInterval) {
+    init(timeout: TimeInterval) {
         self.timeout = timeout
     }
     
     // MARK: OperationObserver
     
-    func operationDidStart(operation: Operation) {
+    func operationDidStart(operation: EQOperation) {
         // When the operation starts, queue up a block to cause it to time out.
-        let when = dispatch_time(DISPATCH_TIME_NOW, Int64(timeout * Double(NSEC_PER_SEC)))
+        let when = DispatchTime.now() + timeout
 
-        dispatch_after(when, dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0)) {
+        DispatchQueue.main.asyncAfter(deadline: when) {
             /*
                 Cancel the operation if it hasn't finished and hasn't already
                 been cancelled.
             */
-            if !operation.finished && !operation.cancelled {
+            if !operation.isFinished && !operation.isCancelled {
                 let error = NSError(code: .ExecutionFailed, userInfo: [
-                    self.dynamicType.timeoutKey: self.timeout
+                    type(of: self).timeoutKey: self.timeout
                 ])
 
-                operation.cancelWithError(error)
+                operation.cancelWithError(error: error)
             }
         }
     }
 
-    func operation(operation: Operation, didProduceOperation newOperation: NSOperation) {
+    func operation(operation: EQOperation, didProduceOperation newOperation: Operation) {
         // No op.
     }
 
-    func operationDidFinish(operation: Operation, errors: [NSError]) {
+    func operationDidFinish(operation: EQOperation, errors: [NSError]) {
         // No op.
     }
 }

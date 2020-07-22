@@ -21,21 +21,21 @@ import Foundation
     subsequent operations (still within the outer `GroupOperation`) that will all
     be executed before the rest of the operations in the initial chain of operations.
 */
-class GroupOperation: Operation {
-    private let internalQueue = OperationQueue()
-    private let startingOperation = NSBlockOperation(block: {})
-    private let finishingOperation = NSBlockOperation(block: {})
+class GroupOperation: EQOperation {
+    private let internalQueue = EQOperationQueue()
+    private let startingOperation = BlockOperation()
+    private let finishingOperation = BlockOperation()
 
     private var aggregatedErrors = [NSError]()
     
-    convenience init(operations: NSOperation...) {
+    convenience init(operations: Operation...) {
         self.init(operations: operations)
     }
     
-    init(operations: [NSOperation]) {
+    init(operations: [Operation]) {
         super.init()
         
-        internalQueue.suspended = true
+        internalQueue.isSuspended = true
         internalQueue.delegate = self
         internalQueue.addOperation(startingOperation)
 
@@ -50,11 +50,11 @@ class GroupOperation: Operation {
     }
     
     override func execute() {
-        internalQueue.suspended = false
+        internalQueue.isSuspended = false
         internalQueue.addOperation(finishingOperation)
     }
     
-    func addOperation(operation: NSOperation) {
+    func addOperation(operation: Operation) {
         internalQueue.addOperation(operation)
     }
     
@@ -67,14 +67,14 @@ class GroupOperation: Operation {
         aggregatedErrors.append(error)
     }
     
-    func operationDidFinish(operation: NSOperation, withErrors errors: [NSError]) {
+    func operationDidFinish(operation: Operation, withErrors errors: [NSError]) {
         // For use by subclassers.
     }
 }
 
 extension GroupOperation: OperationQueueDelegate {
-    final func operationQueue(operationQueue: OperationQueue, willAddOperation operation: NSOperation) {
-        assert(!finishingOperation.finished && !finishingOperation.executing, "cannot add new operations to a group after the group has completed")
+    final func operationQueue(operationQueue: OperationQueue, willAddOperation operation: Operation) {
+        assert(!finishingOperation.isFinished && !finishingOperation.isExecuting, "cannot add new operations to a group after the group has completed")
         
         /*
             Some operation in this group has produced a new operation to execute.
@@ -97,15 +97,15 @@ extension GroupOperation: OperationQueueDelegate {
         }
     }
     
-    final func operationQueue(operationQueue: OperationQueue, operationDidFinish operation: NSOperation, withErrors errors: [NSError]) {
-        aggregatedErrors.appendContentsOf(errors)
+    final func operationQueue(operationQueue: OperationQueue, operationDidFinish operation: Operation, withErrors errors: [NSError]) {
+        aggregatedErrors.append(contentsOf: errors)
         
         if operation === finishingOperation {
-            internalQueue.suspended = true
-            finish(aggregatedErrors)
+            internalQueue.isSuspended = true
+            finish(errors: aggregatedErrors)
         }
         else if operation !== startingOperation {
-            operationDidFinish(operation, withErrors: errors)
+            operationDidFinish(operation: operation, withErrors: errors)
         }
     }
 }

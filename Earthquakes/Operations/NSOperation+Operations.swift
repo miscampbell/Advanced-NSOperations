@@ -3,17 +3,17 @@ Copyright (C) 2015 Apple Inc. All Rights Reserved.
 See LICENSE.txt for this sample’s licensing information
 
 Abstract:
-A convenient extension to Foundation.NSOperation.
+A convenient extension to Foundation.Operation.
 */
 
 import Foundation
 
-extension NSOperation {
+extension Operation {
     /**
-        Add a completion block to be executed after the `NSOperation` enters the
+        Add a completion block to be executed after the `Operation` enters the
         "finished" state.
     */
-    func addCompletionBlock(block: Void -> Void) {
+    func addCompletionBlock(block: @escaping () -> Void) {
         if let existing = completionBlock {
             /*
                 If we already have a completion block, we construct a new one by
@@ -30,7 +30,7 @@ extension NSOperation {
     }
 
     /// Add multiple depdendencies to the operation.
-    func addDependencies(dependencies: [NSOperation]) {
+    func addDependencies(dependencies: [Operation]) {
         for dependency in dependencies {
             addDependency(dependency)
         }

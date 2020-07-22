@@ -10,7 +10,7 @@ import CloudKit
 
 /// A condition describing that the operation requires access to a specific CloudKit container.
 struct CloudContainerCondition: OperationCondition {
-    
+
     static let name = "CloudContainer"
     static let containerKey = "CKContainer"
     
@@ -23,7 +23,7 @@ struct CloudContainerCondition: OperationCondition {
     
     let container: CKContainer // this is the container to which you need access.
 
-    let permission: CKApplicationPermissions
+    let permission: CKContainer_Application_Permissions
     
     /**
         - parameter container: the `CKContainer` to which you need access.
@@ -31,21 +31,21 @@ struct CloudContainerCondition: OperationCondition {
             container. This parameter has a default value of `[]`, which would get
             you anonymized read/write access.
     */
-    init(container: CKContainer, permission: CKApplicationPermissions = []) {
+    init(container: CKContainer, permission: (CKContainer_Application_Permissions) = []) {
         self.container = container
         self.permission = permission
     }
     
-    func dependencyForOperation(operation: Operation) -> NSOperation? {
+    func dependencyForOperation(operation: EQOperation) -> Operation? {
         return CloudKitPermissionOperation(container: container, permission: permission)
     }
     
-    func evaluateForOperation(operation: Operation, completion: OperationConditionResult -> Void) {
-        container.verifyPermission(permission, requestingIfNecessary: false) { error in
+    func evaluateForOperation(operation: EQOperation, completion: @escaping (OperationConditionResult) -> Void) {
+        container.verifyPermission(permission: permission, requestingIfNecessary: false) { error in
             if let error = error {
                 let conditionError = NSError(code: .ConditionFailed, userInfo: [
-                    OperationConditionKey: self.dynamicType.name,
-                    self.dynamicType.containerKey: self.container,
+                    OperationConditionKey: type(of: self).name,
+                    type(of: self).containerKey: self.container,
                     NSUnderlyingErrorKey: error
                 ])
 
@@ -62,11 +62,11 @@ struct CloudContainerCondition: OperationCondition {
     This operation asks the user for permission to use CloudKit, if necessary.
     If permission has already been granted, this operation will quickly finish.
 */
-private class CloudKitPermissionOperation: Operation {
+private class CloudKitPermissionOperation: EQOperation {
     let container: CKContainer
-    let permission: CKApplicationPermissions
+    let permission: CKContainer_Application_Permissions
     
-    init(container: CKContainer, permission: CKApplicationPermissions) {
+    init(container: CKContainer, permission: CKContainer_Application_Permissions) {
         self.container = container
         self.permission = permission
         super.init()
@@ -77,13 +77,13 @@ private class CloudKitPermissionOperation: Operation {
                 an alert, so it should not run at the same time as anything else
                 that presents an alert.
             */
-            addCondition(AlertPresentation())
+            addCondition(condition: AlertPresentation())
         }
     }
     
     override func execute() {
-        container.verifyPermission(permission, requestingIfNecessary: true) { error in
-            self.finishWithError(error)
+        container.verifyPermission(permission: permission, requestingIfNecessary: true) { error in
+            self.finishWithError(error: error)
         }
     }
     
